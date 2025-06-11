@@ -1,107 +1,216 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from '../components/Homepage/page';
 import Footer from '../components/Footer/page';
+import { FaSearch } from 'react-icons/fa';
 
-const letters = [
-  'A', 'B', 'C', 'D', 'E', 'F', 'G',
-  'H', 'I', 'J', 'K', 'L', 'M', 'N',
-  'O', 'P', 'R', 'S', 'T', 'U', 'V',
-  'W', 'X', 'Y', 'Z', '#'
-];
-
-const diseaseData: Record<string, string[]> = {
-  A: [
-    'A fib — See Atrial fibrillation',
-    'Ab — Abdominal aortic aneurysm, Abnormally excessive sweating — See Hyperhidrosis',
-    'Abscess, Bartholin\'s — See Bartholin\'s cyst',
-    'Absence seizure'
-  ],
-  B: [
-    'Ba — Baby acne, Back pain, Bacterial vaginosis',
-    'Bags under eyes, Baker cyst',
-    'Baldness — See Hair loss'
-  ]
-};
+interface Disease {
+  _id: string;
+  alphabet: string;
+  name: string;
+  see: string | null;
+  __v: number;
+}
 
 const ConditionDirectoryPage = () => {
+  const [alphabets, setAlphabets] = useState<string[]>([]);
   const [selectedLetter, setSelectedLetter] = useState<string>('A');
+  const [diseases, setDiseases] = useState<Disease[]>([]);
+  const [loadingAlphabets, setLoadingAlphabets] = useState<boolean>(true);
+  const [loadingDiseases, setLoadingDiseases] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch alphabets on component mount
+  useEffect(() => {
+    const fetchAlphabets = async () => {
+      try {
+        setLoadingAlphabets(true);
+        const response = await fetch('http://localhost:5000/api/event/alphabets', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        if (!response.ok) {
+          throw new Error('Failed to fetch alphabets');
+        }
+        const data = await response.json();
+        if (!Array.isArray(data)) {
+          throw new Error('Alphabets API did not return an array');
+        }
+        setAlphabets(data);
+        setLoadingAlphabets(false);
+      } catch (err: any) {
+        setError(err.message || 'Failed to load alphabets. Please try again later.');
+        setLoadingAlphabets(false);
+      }
+    };
+    fetchAlphabets();
+  }, []);
+
+  // Fetch diseases when selectedLetter changes
+  useEffect(() => {
+    const fetchDiseases = async () => {
+      try {
+        setLoadingDiseases(true);
+        setError(null);
+        const response = await fetch(`http://localhost:5000/api/event/diseases/${selectedLetter}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        if (!response.ok) {
+          throw new Error(`Failed to fetch diseases for letter ${selectedLetter}`);
+        }
+        const data = await response.json();
+        const diseasesArray = Array.isArray(data.diseases) ? data.diseases : [];
+        const validDiseases = diseasesArray.filter(
+          (item: any): item is Disease =>
+            item &&
+            typeof item === 'object' &&
+            '_id' in item &&
+            'alphabet' in item &&
+            'name' in item &&
+            typeof item.name === 'string' &&
+            '__v' in item
+        );
+        setDiseases(validDiseases);
+        if (diseasesArray.length > 0 && validDiseases.length === 0) {
+          setError(`No valid diseases found for letter ${selectedLetter}. Data format is incorrect.`);
+        }
+        setLoadingDiseases(false);
+      } catch (err: any) {
+        setError(err.message || `Failed to load diseases for letter ${selectedLetter}. Please try again later.`);
+        setDiseases([]);
+        setLoadingDiseases(false);
+      }
+    };
+    fetchDiseases();
+  }, [selectedLetter]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-[#2962A8] to-[#041E66] text-white">
-        <div className="bg-white" >
-      <Header />
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-[#E6F0FA] to-[#B3D4FF] text-gray-900">
+      {/* Header */}
+      <div className="bg-white shadow-lg">
+        <Header />
       </div>
 
-      <main className="flex-grow px-4 md:px-16 py-10">
-        <div className="grid grid-cols-12 gap-6">
-          {/* Left Side */}
-          <div className="col-span-12 md:col-span-9">
-            <h1 className="text-4xl font-bold mb-2" style={{ fontFamily: '"mayo-display", Georgia, serif' }}>
+      {/* Main Content */}
+      <main className="flex-grow px-4 md:px-20 lg:px-32 py-16">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-10">
+          {/* Left Side: Diseases & Conditions */}
+          <div className="col-span-12 md:col-span-8">
+            {/* Heading */}
+            <h1
+              className="text-4xl md:text-5xl font-bold mb-4 text-gray-900 animate-fade-in tracking-tight"
+              style={{ fontFamily: '"mayo-display", Georgia, serif' }}
+            >
               Diseases & Conditions
             </h1>
-
-            {/* Gradient divider below heading */}
-            <div className="h-1 w-36 bg-gradient-to-r from-blue-400 to-blue-800 rounded-full mb-6"></div>
-
-            <p className="text-lg mb-6" style={{ fontFamily: '"mayo-sans", Times, sans-serif' }}>
-              Easy-to-understand answers about diseases and conditions
+            <div className="h-1 w-48 bg-gradient-to-r from-blue-600 to-blue-900 rounded-full mb-8 animate-slide-in"></div>
+            <p
+              className="text-lg md:text-xl text-gray-700 mb-10 animate-fade-in leading-relaxed"
+              style={{ fontFamily: '"mayo-sans", Times, sans-serif' }}
+            >
+              Explore comprehensive, easy-to-understand information about diseases and conditions.
             </p>
 
-            {/* Search */}
-            <div className="mb-10 ">
-              <label htmlFor="search" className="block text-base mb-1">Search diseases & conditions</label>
-              {/* <p className="text-sm mb-2">Type 3 or more letters to display suggested search options.</p> */}
-              <div className="relative max-w-xl">
+            {/* Search Bar */}
+            <div className="mb-12">
+              <label
+                htmlFor="search"
+                className="block text-base font-medium text-gray-800 mb-3"
+                style={{ fontFamily: '"mayo-sans", Times, sans-serif' }}
+              >
+                Search diseases & conditions
+              </label>
+              <div className="relative max-w-2xl">
                 <input
                   id="search"
                   type="text"
-                  placeholder="Search"
-                  className="w-full px-5 py-4 bg-white text-black rounded-full text-lg shadow focus:outline-none"
+                  placeholder="Search for a condition..."
+                  className="w-full px-6 py-4 pl-14 bg-white text-gray-900 rounded-full text-lg shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:shadow-xl transition-all duration-300 ease-in-out placeholder-gray-400"
                 />
-                <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-black text-xl"></span>
+                <FaSearch className="absolute left-5 top-1/2 transform -translate-y-1/2 text-gray-500 text-xl" />
               </div>
             </div>
 
             {/* Conditions List */}
-            <div className="bg-white text-black rounded-lg shadow-md p-6" style={{ fontFamily: '"mayo-sans", Times, sans-serif' }}>
-              <h2 className="text-2xl font-semibold mb-4" style={{ fontFamily: '"mayo-display", Georgia, serif' }}>
+            <div
+              className="bg-white rounded-2xl shadow-xl p-8 transition-all duration-300 hover:shadow-2xl"
+              style={{ fontFamily: '"mayo-sans", Times, sans-serif' }}
+            >
+              <h2
+                className="text-2xl md:text-3xl font-semibold mb-6 text-gray-900"
+                style={{ fontFamily: '"mayo-display", Georgia, serif' }}
+              >
                 Conditions starting with "{selectedLetter}"
               </h2>
-              <ul className="list-disc list-inside space-y-2">
-                {(diseaseData[selectedLetter] || []).map((item, idx) => (
-                  <li key={idx}>{item}</li>
-                ))}
-              </ul>
+              {loadingDiseases ? (
+                <p className="text-gray-600 animate-pulse">Loading conditions...</p>
+              ) : error ? (
+                <p className="text-red-600 font-medium">{error}</p>
+              ) : diseases.length === 0 ? (
+                <p className="text-gray-600">No conditions found for letter "{selectedLetter}".</p>
+              ) : (
+                <ul className="space-y-4">
+                  {diseases.map((disease) => (
+                    <li
+                      key={disease._id}
+                      className="text-gray-800 hover:text-blue-700 hover:underline transition-all duration-200 text-lg"
+                    >
+                      <a href={`/conditions/${disease.name.toLowerCase().replace(/\s+/g, '-')}`}>
+                        {disease.name}
+                        {disease.see && (
+                          <span className="text-gray-500 text-sm"> — See {disease.see}</span>
+                        )}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </div>
 
-          {/* Right Side Alphabet Selector */}
-          <div className="col-span-12 md:col-span-3">
-            <h2 className="text-lg font-semibold mb-4" style={{ fontFamily: '"mayo-display", Georgia, serif' }}>
-              Find diseases & conditions by first letter
+          {/* Right Side: Alphabet Selector */}
+          <div className="col-span-12 md:col-span-4">
+            <h2
+              className="text-xl md:text-2xl font-semibold mb-6 text-gray-900"
+              style={{ fontFamily: '"mayo-display", Georgia, serif' }}
+            >
+              Find by First Letter
             </h2>
-            <div className="grid grid-cols-7 gap-x-[55px] gap-y-[10px] justify-center">
-              {letters.map((letter) => (
-                <button
-                  key={letter}
-                  onClick={() => setSelectedLetter(letter)}
-                  className={`rounded-full w-10 h-10 md:w-12 md:h-12 flex items-center justify-center text-sm md:text-base font-semibold transition-all ${
-                    selectedLetter === letter
-                      ? 'bg-white text-blue-900'
-                      : 'bg-blue-700 hover:bg-blue-600'
-                  }`}
-                >
-                  {letter}
-                </button>
-              ))}
-            </div>
+            {loadingAlphabets ? (
+              <p className="text-gray-600 animate-pulse">Loading alphabets...</p>
+            ) : error ? (
+              <p className="text-red-600 font-medium">{error}</p>
+            ) : (
+              <div className="grid grid-cols-7 gap-3 md:gap-4">
+                {alphabets.map((letter) => (
+                  <button
+                    key={letter}
+                    onClick={() => setSelectedLetter(letter)}
+                    className={`rounded-full w-12 h-12 md:w-14 md:h-14 flex items-center justify-center text-base md:text-lg font-semibold transition-all duration-300 ease-in-out shadow-lg hover:shadow-xl ${
+                      selectedLetter === letter
+                        ? 'bg-blue-600 text-white scale-110'
+                        : 'bg-white text-gray-900 hover:bg-blue-500 hover:text-white hover:scale-105'
+                    }`}
+                  >
+                    {letter}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </main>
 
-      <Footer />
+      {/* Footer */}
+      <div className="bg-white shadow-lg">
+        <Footer />
+      </div>
     </div>
   );
 };

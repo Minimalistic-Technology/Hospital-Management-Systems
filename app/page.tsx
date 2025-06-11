@@ -1,6 +1,7 @@
 import Homepage from "./components/Homepage/page";
 import HeroSection from "./components/HeroSection/page";
 import Footer from "./components/Footer/page";
+import ReviewForm from "./components/ReviewForm/page";
 
 export default function Home() {
   return (
@@ -9,6 +10,7 @@ export default function Home() {
         <>
         <Homepage />
         <HeroSection />
+        <ReviewForm />
         <Footer />
         </>
       </main>

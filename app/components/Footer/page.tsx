@@ -24,7 +24,7 @@ const Footer: React.FC = () => {
                   <Link
                     key={idx}
                     href={button.href}
-                    className="flex items-center justify-between px-5 py-3 border border-gray-300/30 rounded-lg text-white hover:bg-white hover:bg-opacity-15 hover:scale-[1.02] transition-all duration-300 shadow-sm"
+                    className="flex items-center justify-between px-5 py-3 border border-gray-300/30 rounded-lg text-white hover:bg-white hover:text-black hover:bg-opacity-15 hover:scale-[1.02] transition-all duration-300 shadow-sm"
                   >
                     <span className="flex items-center text-sm font-medium">
                       <span className="mr-3 text-lg">{button.icon}</span> {button.text}
