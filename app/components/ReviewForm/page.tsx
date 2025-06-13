@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 
 // Define the type for the form data
@@ -10,6 +10,17 @@ interface ReviewFormData {
   rating: number;
   department: string;
   consent: boolean;
+}
+
+// Define the type for reviews fetched from the backend
+interface Review {
+  _id: string;
+  nameOrInitials: string;
+  department: string;
+  review: string;
+  rating: number;
+  privacyAgreed: boolean;
+  createdAt: string;
 }
 
 const ReviewForm: React.FC = () => {
@@ -23,6 +34,31 @@ const ReviewForm: React.FC = () => {
   const [submitted, setSubmitted] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [currentIndex, setCurrentIndex] = useState<number>(0);
+
+  // Fetch reviews from the backend
+  const fetchReviews = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/hospital/reviews', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch reviews');
+      }
+      const data = await response.json();
+      setReviews(data);
+    } catch (err) {
+      console.error('Error fetching reviews:', err);
+      setError('Failed to load reviews. Please try again later.');
+    }
+  };
+
+  // Load reviews on component mount
+  useEffect(() => {
+    fetchReviews();
+  }, []);
 
   // Handle input changes
   const handleChange = (
@@ -56,21 +92,46 @@ const ReviewForm: React.FC = () => {
       return;
     }
     setIsLoading(true);
-    // Mock submission with delay to simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    // Replace with actual API call in production, e.g.:
-    // await fetch('/api/reviews', { method: 'POST', body: JSON.stringify(formData) });
-    console.log('Submitted Review:', formData);
-    setSubmitted(true);
-    setError('');
-    setIsLoading(false);
-    // Reset form
-    setFormData({ patientName: '', reviewText: '', rating: 0, department: '', consent: false });
+    try {
+      const response = await fetch('http://localhost:5000/api/hospital/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nameOrInitials: formData.patientName,
+          review: formData.reviewText,
+          rating: formData.rating,
+          department: formData.department,
+          privacyAgreed: formData.consent,
+        }),
+      });
+      if (!response.ok) {
+        throw new Error('Failed to submit review');
+      }
+      setSubmitted(true);
+      setError('');
+      setFormData({ patientName: '', reviewText: '', rating: 0, department: '', consent: false });
+      // Refresh reviews after submission
+      await fetchReviews();
+    } catch (err) {
+      setError('Failed to submit review. Please try again.');
+      console.error('Error submitting review:', err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Handle submitting another review
   const handleAnotherReview = () => {
     setSubmitted(false);
+  };
+
+  // Handle carousel navigation
+  const handlePrev = () => {
+    setCurrentIndex((prev) => (prev === 0 ? reviews.length - 1 : prev - 1));
+  };
+
+  const handleNext = () => {
+    setCurrentIndex((prev) => (prev === reviews.length - 1 ? 0 : prev + 1));
   };
 
   // Character counter for review text
@@ -80,6 +141,13 @@ const ReviewForm: React.FC = () => {
   const fadeIn = {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: 'easeOut' } },
+  };
+
+  // Animation for review carousel
+  const reviewVariants = {
+    hidden: { opacity: 0, x: 50 },
+    visible: { opacity: 1, x: 0, transition: { duration: 0.5, ease: 'easeOut' } },
+    exit: { opacity: 0, x: -50, transition: { duration: 0.5, ease: 'easeOut' } },
   };
 
   return (
@@ -208,8 +276,8 @@ const ReviewForm: React.FC = () => {
                         className={`w-8 h-8 focus:outline-none transition-transform transform hover:scale-110 ${formData.rating >= star ? 'text-yellow-400' : 'text-gray-300'}`}
                         aria-label={`Rate ${star} stars`}
                       >
-                        <svg fill="currentColor" viewBox="0 0 20 20">
-                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.518 4.674a1 1 0 00.95.69h4.905c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.921-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118L2.994 10.1c-.783-.57-.38-1.81.588-1.81h4.905a1 1 0 00.95-.69l1.518-4.674z" />
+                        <svg fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M12 2l2.4 7.2h7.6l-6 4.8 2.4 7.2-6-4.8-6 4.8 2.4-7.2-6-4.8h7.6z" />
                         </svg>
                       </button>
                     ))}
@@ -260,6 +328,77 @@ const ReviewForm: React.FC = () => {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Reviews Section */}
+        {reviews.length > 0 && (
+          <motion.div
+            className="mt-12"
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, ease: 'easeOut' }}
+          >
+            <h3 className="text-2xl font-bold text-black text-center mb-6">
+              Patient Reviews
+            </h3>
+            <div className="relative">
+              <div className="flex items-center">
+                <button
+                  onClick={handlePrev}
+                  className="absolute left-0 z-10 p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-transform transform hover:scale-110"
+                  aria-label="Previous review"
+                >
+                  &lt;
+                </button>
+                <div className="overflow-hidden w-full">
+                  <motion.div
+                    className="flex"
+                    animate={{ x: `-${currentIndex * 100}%` }}
+                    transition={{ duration: 0.5, ease: 'easeOut' }}
+                  >
+                    {reviews.map((review) => (
+                      <motion.div
+                        key={review._id}
+                        className="min-w-full p-6 bg-white rounded-xl shadow-lg"
+                        variants={reviewVariants}
+                        initial="hidden"
+                        animate="visible"
+                        exit="exit"
+                      >
+                        <p className="text-lg font-semibold text-black">
+                          {review.nameOrInitials}
+                        </p>
+                        <p className="text-sm text-gray-600">{review.department}</p>
+                        <div className="flex mt-2">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <svg
+                              key={star}
+                              className={`w-6 h-6 ${review.rating >= star ? 'text-yellow-400' : 'text-gray-300'}`}
+                              fill="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path d="M12 2l2.4 7.2h7.6l-6 4.8 2.4 7.2-6-4.8-6 4.8 2.4-7.2-6-4.8h7.6z" />
+                            </svg>
+                          ))}
+                        </div>
+                        <p className="mt-4 text-black">{review.review}</p>
+                        <p className="mt-2 text-sm text-gray-500">
+                          {new Date(review.createdAt).toLocaleDateString()}
+                        </p>
+                      </motion.div>
+                    ))}
+                  </motion.div>
+                </div>
+                <button
+                  onClick={handleNext}
+                  className="absolute right-0 z-10 p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-transform transform hover:scale-110"
+                  aria-label="Next review"
+                >
+                  &gt;
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
       </div>
     </section>
   );

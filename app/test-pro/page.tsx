@@ -1,22 +1,88 @@
-
-// test-pro/page.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from '@/app/components/Homepage/page';
 import Footer from '@/app/components/Footer/page';
 import Link from 'next/link';
 
-const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ#'.split('');
-const disabled = [ 'Q', 'Y', 'Z'];
+interface Test {
+  _id: string;
+  name: string;
+  link?: string;
+  seeAlso?: string;
+  firstLetter: string;
+  __v: number;
+}
 
 const TestsProceduresPage = () => {
-  const [selected, setSelected] = useState<string | null>(null);
+  const [alphabet, setAlphabet] = useState<string[]>([]);
+  const [disabledLetters, setDisabledLetters] = useState<string[]>([]);
+  const [selectedLetter, setSelectedLetter] = useState<string | null>(null);
+  const [tests, setTests] = useState<Test[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string>('');
 
-  const handleLetterClick = (letter: string) => {
-    if (!disabled.includes(letter)) {
-      setSelected(letter);
-      // Future: fetch tests/procedures for `letter`
+  // Fetch alphabet letters on component mount
+  useEffect(() => {
+    const fetchAlphabet = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/hospital/symptoms/alphabets', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        if (!response.ok) {
+          throw new Error('Failed to fetch alphabet letters');
+        }
+        const data = await response.json();
+        setAlphabet(data);
+
+        // Check which letters have no tests (to disable them)
+        const disabled: string[] = [];
+        for (const letter of data) {
+          const testResponse = await fetch(`http://localhost:5000/api/hospital/tests/${letter}`, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+          });
+          if (testResponse.ok) {
+            const testsData = await testResponse.json();
+            if (testsData.length === 0) {
+              disabled.push(letter);
+            }
+          }
+        }
+        setDisabledLetters(disabled);
+      } catch (err) {
+        console.error('Error fetching alphabet:', err);
+        setError('Failed to load alphabet letters. Please try again later.');
+      }
+    };
+
+    fetchAlphabet();
+  }, []);
+
+  // Fetch tests/procedures when a letter is clicked
+  const handleLetterClick = async (letter: string) => {
+    if (disabledLetters.includes(letter)) return;
+
+    setSelectedLetter(letter);
+    setLoading(true);
+    setError('');
+    try {
+      const response = await fetch(`http://localhost:5000/api/hospital/tests/${letter}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to fetch tests for letter ${letter}`);
+      }
+      const data = await response.json();
+      setTests(data);
+    } catch (err) {
+      console.error(`Error fetching tests for letter ${letter}:`, err);
+      setError(`Failed to load tests for letter ${letter}. Please try again.`);
+      setTests([]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -50,19 +116,60 @@ const TestsProceduresPage = () => {
             <h2 className="text-xl font-semibold text-gray-900 mb-4 font-mayoDisplay" style={{ fontFamily: "'mayo-display', 'Georgia', serif" }}>
               Find a test or procedure by its first letter
             </h2>
-            <div className="grid grid-cols-13 gap-3 mb-12">
-              {alphabet.map((letter) => (
-                <button
-                  key={letter}
-                  onClick={() => handleLetterClick(letter)}
-                  disabled={disabled.includes(letter)}
-                  className={`w-10 h-10 border border-blue-500 font-bold rounded-md text-blue-800
-                    ${disabled.includes(letter) ? 'cursor-not-allowed opacity-40' : 'hover:bg-blue-50'}`}
-                >
-                  {letter}
-                </button>
-              ))}
-            </div>
+            {error && (
+              <p className="text-red-600 mb-4">{error}</p>
+            )}
+            {alphabet.length > 0 ? (
+              <div className="grid grid-cols-13 gap-3 mb-12">
+                {alphabet.map((letter) => (
+                  <button
+                    key={letter}
+                    onClick={() => handleLetterClick(letter)}
+                    disabled={disabledLetters.includes(letter)}
+                    className={`w-10 h-10 border border-blue-500 font-bold rounded-md text-blue-800
+                      ${disabledLetters.includes(letter) ? 'cursor-not-allowed opacity-40' : 'hover:bg-blue-50'}
+                      ${selectedLetter === letter ? 'bg-blue-100' : ''}`}
+                  >
+                    {letter}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-600 mb-12">Loading alphabet...</p>
+            )}
+
+            {/* Display Tests/Procedures */}
+            {selectedLetter && (
+              <div className="mb-12">
+                <h3 className="text-xl font-semibold text-gray-900 mb-4 font-mayoDisplay" style={{ fontFamily: "'mayo-display', 'Georgia', serif" }}>
+                  Tests and Procedures starting with {selectedLetter}
+                </h3>
+                {loading ? (
+                  <p className="text-gray-600">Loading tests...</p>
+                ) : tests.length > 0 ? (
+                  <ul className="space-y-2">
+                    {tests.map((test) => (
+                      <li key={test._id} className="border-b border-gray-200 py-2">
+                        {test.link ? (
+                          <Link href={test.link} className="text-blue-900 hover:underline">
+                            {test.name}
+                          </Link>
+                        ) : (
+                          <span className="text-gray-900">{test.name}</span>
+                        )}
+                        {test.seeAlso && (
+                          <p className="text-sm text-gray-600">
+                            See also: {test.seeAlso}
+                          </p>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-gray-600">No tests found for letter {selectedLetter}.</p>
+                )}
+              </div>
+            )}
 
             {/* Appointments and Clinical Trials Sections */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

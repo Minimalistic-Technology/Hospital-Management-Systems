@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -40,7 +39,7 @@ const FindADocPage: React.FC = () => {
     const fetchAlphabets = async () => {
       try {
         setLoading(true);
-        const response = await fetch('http://localhost:5000/api/event/doctors/alphabets/');
+        const response = await fetch('http://localhost:5000/api/hospital/doctors/alphabets');
         if (!response.ok) {
           throw new Error('Failed to fetch alphabets');
         }
@@ -63,7 +62,7 @@ const FindADocPage: React.FC = () => {
         try {
           setLoading(true);
           const response = await fetch(
-            `http://localhost:5000/api/event/doctors/alphabets/${selectedLetter}`
+            `http://localhost:5000/api/hospital/doctors/alphabets/${selectedLetter}`
           );
           if (!response.ok) {
             throw new Error(`Failed to fetch doctors for letter ${selectedLetter}`);

@@ -35,7 +35,7 @@ const LaboratoriesPage: React.FC = () => {
     const fetchAlphabets = async () => {
       try {
         setLoading(true);
-        const response = await fetch('http://localhost:5000/api/event/alphabets');
+        const response = await fetch('http://localhost:5000/api/hospital/doctors/alphabets');
         if (!response.ok) {
           throw new Error('Failed to fetch alphabets');
         }
@@ -57,7 +57,7 @@ const LaboratoriesPage: React.FC = () => {
       try {
         setLoading(true);
         const response = await fetch(
-          `http://localhost:5000/api/event/labs/alphabets/${selectedLetter}`
+          `http://localhost:5000/api/hospital/labs/alphabets/${selectedLetter}`
         );
         if (!response.ok) {
           throw new Error(`Failed to fetch labs for letter ${selectedLetter}`);

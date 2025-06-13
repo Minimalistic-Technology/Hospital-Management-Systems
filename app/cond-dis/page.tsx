@@ -26,7 +26,7 @@ const ConditionDirectoryPage = () => {
     const fetchAlphabets = async () => {
       try {
         setLoadingAlphabets(true);
-        const response = await fetch('http://localhost:5000/api/event/alphabets', {
+        const response = await fetch('http://localhost:5000/api/hospital/doctors/alphabets', {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -55,7 +55,7 @@ const ConditionDirectoryPage = () => {
       try {
         setLoadingDiseases(true);
         setError(null);
-        const response = await fetch(`http://localhost:5000/api/event/diseases/${selectedLetter}`, {
+        const response = await fetch(`http://localhost:5000/api/hospital/diseases/${selectedLetter}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',

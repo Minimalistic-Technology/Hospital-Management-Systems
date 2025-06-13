@@ -25,7 +25,7 @@ const SymptomsPage = () => {
       try {
         setLoadingAlphabets(true);
         setError(null);
-        const response = await fetch('http://localhost:5000/api/event/alphabets', {
+        const response = await fetch('http://localhost:5000/api/hospital/symptoms/alphabets', {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -62,7 +62,7 @@ const SymptomsPage = () => {
       try {
         setLoadingSymptoms(true);
         setError(null);
-        const response = await fetch(`http://localhost:5000/api/event/symptoms/${selectedLetter}`, {
+        const response = await fetch(`http://localhost:5000/api/hospital/symptoms/${selectedLetter}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
